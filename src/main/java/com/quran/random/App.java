@@ -16,7 +16,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 
 public class App {
 
-	public static final String URL = "https://quranbysubject.com/";
+	private static final String URL = "https://quranbysubject.com/";
 
 	public static boolean isBlankLine(String line) {
 		if (line.isBlank())
@@ -35,15 +35,8 @@ public class App {
 		return subcategory.substring(colonIndex + 1);
 	}
 
-	public static List<Verse> scrapeVersesPage(String category, String pageURL) throws IOException {
+	public static List<Verse> extractVerses(Elements pageData, String category, String subcategoryStr) {
 		List<Verse> versesList = new LinkedList<>();
-
-		Document doc = Jsoup.connect(pageURL).get();
-
-		Elements pageData = doc.select("#Quran a[onclick*=\"تفسير الآية\"], #Quran .ayanum, #Quran h4, #Quran br");
-		Elements subcategory = doc.select(".wrapper .row .panel h3");
-
-		String subcategoryStr = getPureSubcategory(subcategory.get(0).text().trim());
 		String surahName = "";
 		String verses = "";
 
@@ -64,8 +57,19 @@ public class App {
 
 			verses += lineStr;
 		}
-
 		return versesList;
+	}
+
+	public static List<Verse> scrapeVersesPage(String category, String pageURL) throws IOException {
+
+		Document doc = Jsoup.connect(pageURL).get();
+
+		Elements pageData = doc.select("#Quran a[onclick*=\"تفسير الآية\"], #Quran .ayanum, #Quran h4, #Quran br");
+		Elements subcategory = doc.select(".wrapper .row .panel h3");
+
+		String subcategoryStr = getPureSubcategory(subcategory.get(0).text().trim());
+
+		return extractVerses(pageData, category, subcategoryStr);
 
 	}
 
@@ -81,8 +85,7 @@ public class App {
 		}
 	}
 
-	public static void main(String[] args) throws IOException {
-
+	public static List<Verse> extractIndexPage() throws IOException {
 		List<Verse> versesList = new LinkedList<>();
 		int userCounter = 1;
 
@@ -93,7 +96,7 @@ public class App {
 		for (Element element : categories) {
 			String category = element.text().trim();
 
-			System.out.println("Scannning ...");
+			System.out.println("Extracting ...");
 
 			Elements subcategoryLinks = index.select("#users" + Integer.toString(userCounter) + " .name");
 
@@ -107,6 +110,12 @@ public class App {
 
 		}
 
+		return versesList;
+	}
+
+	public static void main(String[] args) throws IOException {
+
+		List<Verse> versesList = extractIndexPage();
 		System.out.println("writing objects to the file");
 		writeObjectsToFile(versesList, "output.json");
 		System.out.println("Done");
